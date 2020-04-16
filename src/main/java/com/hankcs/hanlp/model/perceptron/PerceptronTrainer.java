@@ -27,10 +27,7 @@ import com.hankcs.hanlp.collection.trie.DoubleArrayTrie;
 import com.hankcs.hanlp.corpus.document.sentence.Sentence;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.System.err;
 import static java.lang.System.out;
@@ -59,12 +56,15 @@ public abstract class PerceptronTrainer extends InstanceConsumer
         double prf[];
 
         //训练过程
-        StringBuilder progress;
+        StringBuilder message;
 
-        public Result(LinearModel model, double[] prf,StringBuilder progress)
+        List<String> progress;
+
+        public Result(LinearModel model, double[] prf,StringBuilder message,List<String> progress)
         {
             this.model = model;
             this.prf = prf;
+            this.message=message;
             this.progress=progress;
         }
 
@@ -92,9 +92,11 @@ public abstract class PerceptronTrainer extends InstanceConsumer
             return model;
         }
 
-        public StringBuilder getProgress(){
-            return progress;
+        public StringBuilder getMessage(){
+            return message;
         }
+
+        public List<String> getProgress(){return progress;}
 
 
     }
@@ -128,14 +130,15 @@ public abstract class PerceptronTrainer extends InstanceConsumer
         }
 
         StringBuilder message=new StringBuilder();
+        List<String> accuracyList=new ArrayList<>();
 
         // 加载训练语料
         TagSet tagSet = createTagSet();
         MutableFeatureMap mutableFeatureMap = new MutableFeatureMap(tagSet);
-        message.append("开始加载训练集...\n");
+        message.append("--开始加载训练集...");
         Instance[] instances = loadTrainInstances(trainingFile, mutableFeatureMap);
         tagSet.lock();
-        message.append("\n加载完毕，实例一共"+ instances.length+"句，特征总数"+mutableFeatureMap.size() * tagSet.size());
+        message.append("--加载完毕，实例一共"+ instances.length+"句，特征总数"+mutableFeatureMap.size() * tagSet.size());
 
         // 开始训练
         ImmutableFeatureMap immutableFeatureMap = new ImmutableFeatureMap(mutableFeatureMap.featureIdMap, tagSet);
@@ -175,18 +178,17 @@ public abstract class PerceptronTrainer extends InstanceConsumer
 
                 // 在开发集上校验
                 accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, model) : evaluate(developFile, model);
-                message.append("Iter# - "+iter);
-                printAccuracy(accuracy,message);
+                printAccuracy(accuracy,accuracyList);
             }
             // 平均
             model.average(total, timestamp, current);
             accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, model) : evaluate(developFile, model);
-            message.append("AP - ");
-            printAccuracy(accuracy,message);
-            message.append("以压缩比 "+compressRatio+" 保存模型到 ... "+ modelFile);
+            message.append("--AP - ");
+            printAccuracy(accuracy,accuracyList);
+            message.append("--以压缩比 "+(compressRatio+"").substring(0,8)+" 保存模型到 ... "+ modelFile);
             model.save(modelFile, immutableFeatureMap.featureIdMap.entrySet(), compressRatio);
-            message.append(" 保存完毕\n");
-            if (compressRatio == 0) return new Result(model, accuracy,message);
+            message.append("--保存完毕--");
+            if (compressRatio == 0) return new Result(model, accuracy,message,accuracyList);
         }
         else
         {
@@ -224,46 +226,45 @@ public abstract class PerceptronTrainer extends InstanceConsumer
                         models[0].parameter[j] /= threadNum;
                     }
                     accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, models[0]) : evaluate(developFile, models[0]);
-                    message.append("Iter# - "+iter);
-                    printAccuracy(accuracy,message);
+                    printAccuracy(accuracy,accuracyList);
                 }
                 catch (InterruptedException e)
                 {
-                    message.append("线程同步异常，训练失败\n");
+                    message.append("--线程同步异常，训练失败--");
                     e.printStackTrace();
                     return null;
                 }
             }
-            message.append("以压缩比 "+compressRatio+" 保存模型到 ... "+modelFile);
+            message.append("--以压缩比 "+(compressRatio+"").substring(0,8)+" 保存模型到 ... "+modelFile);
             models[0].save(modelFile, immutableFeatureMap.featureIdMap.entrySet(), compressRatio, HanLP.Config.DEBUG);
-            message.append(" 保存完毕\n");
-            if (compressRatio == 0) return new Result(models[0], accuracy,message);
+            message.append("--保存完毕--");
+            if (compressRatio == 0) return new Result(models[0], accuracy,message,accuracyList);
         }
 
         LinearModel model = new LinearModel(modelFile);
         if (compressRatio > 0)
         {
             accuracy = evaluate(developFile, model);
-            message.append("\ncompressed model - "+ compressRatio);
-            printAccuracy(accuracy,message);
+            message.append("--compressed model - "+ (compressRatio+"").substring(0,8));
+            printAccuracy(accuracy,accuracyList);
         }
 
-        return new Result(model, accuracy,message);
+        return new Result(model, accuracy,message,accuracyList);
     }
 
-    private void printAccuracy(double[] accuracy,StringBuilder sb)
+    private void printAccuracy(double[] accuracy,List<String> list)
     {
         if (accuracy.length == 3)
         {
             String p=(accuracy[0]+"").substring(0,8);
             String r=(accuracy[1]+"").substring(0,8);
-            String f=(accuracy[3]+"").substring(0,8);
-            sb.append("P:"+p+" R:"+r+ " F:"+f);
+            String f=(accuracy[2]+"").substring(0,8);
+            list.add("P:"+p+"R:"+r+ "F:"+f);
         }
         else
         {
             String p=(accuracy[0]+"").substring(0,8);
-            sb.append("P:"+p);
+            list.add("P:"+p);
         }
     }
 
