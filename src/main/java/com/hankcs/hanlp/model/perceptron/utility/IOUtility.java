@@ -91,11 +91,6 @@ public class IOUtility extends IOUtil
         for (int i = 0; i < instances.length; i++)
         {
             evaluate(instances[i], model, stat);
-            if (i % 100 == 0 || i == instances.length - 1)
-            {
-                System.err.printf("%c进度: %.2f%%", 13, (i + 1) / (float) instances.length * 100);
-                System.err.flush();
-            }
         }
         return new double[]{stat[1] / (double) stat[0] * 100};
     }

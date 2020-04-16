@@ -58,9 +58,9 @@ public abstract class PerceptronTrainer extends InstanceConsumer
         //训练过程
         StringBuilder message;
 
-        List<String> progress;
+        List<Double> progress;
 
-        public Result(LinearModel model, double[] prf,StringBuilder message,List<String> progress)
+        public Result(LinearModel model, double[] prf,StringBuilder message,List<Double> progress)
         {
             this.model = model;
             this.prf = prf;
@@ -96,7 +96,7 @@ public abstract class PerceptronTrainer extends InstanceConsumer
             return message;
         }
 
-        public List<String> getProgress(){return progress;}
+        public List<Double> getProgress(){return progress;}
 
 
     }
@@ -130,7 +130,7 @@ public abstract class PerceptronTrainer extends InstanceConsumer
         }
 
         StringBuilder message=new StringBuilder();
-        List<String> accuracyList=new ArrayList<>();
+        List<Double> accuracyList=new ArrayList<>();
 
         // 加载训练语料
         TagSet tagSet = createTagSet();
@@ -178,14 +178,14 @@ public abstract class PerceptronTrainer extends InstanceConsumer
 
                 // 在开发集上校验
                 accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, model) : evaluate(developFile, model);
-                printAccuracy(accuracy,accuracyList);
+                printAccuracy(accuracy,accuracyList,message);
             }
             // 平均
             model.average(total, timestamp, current);
             accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, model) : evaluate(developFile, model);
             message.append("--AP - ");
-            printAccuracy(accuracy,accuracyList);
-            message.append("--以压缩比 "+(compressRatio+"").substring(0,8)+" 保存模型到 ... "+ modelFile);
+            printAccuracy(accuracy,accuracyList,message);
+            message.append("--以压缩比 "+(compressRatio+"").substring(0,5)+" 保存模型到 ... "+ modelFile);
             model.save(modelFile, immutableFeatureMap.featureIdMap.entrySet(), compressRatio);
             message.append("--保存完毕--");
             if (compressRatio == 0) return new Result(model, accuracy,message,accuracyList);
@@ -226,7 +226,7 @@ public abstract class PerceptronTrainer extends InstanceConsumer
                         models[0].parameter[j] /= threadNum;
                     }
                     accuracy = trainingFile.equals(developFile) ? IOUtility.evaluate(instances, models[0]) : evaluate(developFile, models[0]);
-                    printAccuracy(accuracy,accuracyList);
+                    printAccuracy(accuracy,accuracyList,message);
                 }
                 catch (InterruptedException e)
                 {
@@ -235,7 +235,7 @@ public abstract class PerceptronTrainer extends InstanceConsumer
                     return null;
                 }
             }
-            message.append("--以压缩比 "+(compressRatio+"").substring(0,8)+" 保存模型到 ... "+modelFile);
+            message.append("--以压缩比 "+(compressRatio+"").substring(0,5)+" 保存模型到 ... "+modelFile);
             models[0].save(modelFile, immutableFeatureMap.featureIdMap.entrySet(), compressRatio, HanLP.Config.DEBUG);
             message.append("--保存完毕--");
             if (compressRatio == 0) return new Result(models[0], accuracy,message,accuracyList);
@@ -245,26 +245,25 @@ public abstract class PerceptronTrainer extends InstanceConsumer
         if (compressRatio > 0)
         {
             accuracy = evaluate(developFile, model);
-            message.append("--compressed model - "+ (compressRatio+"").substring(0,8));
-            printAccuracy(accuracy,accuracyList);
+            message.append("--compressed model - "+ (compressRatio+"").substring(0,5));
+            printAccuracy(accuracy,accuracyList,message);
         }
 
         return new Result(model, accuracy,message,accuracyList);
     }
 
-    private void printAccuracy(double[] accuracy,List<String> list)
+    private void printAccuracy(double[] accuracy,List<Double> list,StringBuilder sb)
     {
         if (accuracy.length == 3)
         {
-            String p=(accuracy[0]+"").substring(0,8);
-            String r=(accuracy[1]+"").substring(0,8);
-            String f=(accuracy[2]+"").substring(0,8);
-            list.add("P:"+p+"R:"+r+ "F:"+f);
+            String p=(accuracy[0]+"").substring(0,5);
+            String r=(accuracy[1]+"").substring(0,5);
+            String f=(accuracy[2]+"").substring(0,5);
+            sb.append("P:"+p+"R:"+r+ "F:"+f);
         }
         else
         {
-            String p=(accuracy[0]+"").substring(0,8);
-            list.add("P:"+p);
+            list.add(accuracy[0]);
         }
     }
 
