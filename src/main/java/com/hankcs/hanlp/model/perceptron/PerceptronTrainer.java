@@ -260,6 +260,7 @@ public abstract class PerceptronTrainer extends InstanceConsumer
             String r=(accuracy[1]+"").substring(0,5);
             String f=(accuracy[2]+"").substring(0,5);
             sb.append("P:"+p+"R:"+r+ "F:"+f);
+            list.add(accuracy[2]);
         }
         else
         {
